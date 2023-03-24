@@ -1,6 +1,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
+from typing import List
 
 import jsonschema
 import semver
@@ -54,6 +55,8 @@ class AddonBundles:
 
     def _parse_main_bundle(self):
         operator_dir = self.root_dir / "main"
+        # TODO: allow non existence of `main` subdirectory
+        # when non OLM addons are supported
         if not operator_dir.is_dir():
             raise AddonBundlesError(
                 f"invalid structure for {self.root_dir}: {operator_dir} does"
@@ -64,11 +67,11 @@ class AddonBundles:
     def _parse_dependency_bundles(self):
         res = []
         for operator_dir in get_subdirs(self.root_dir):
-            if operator_dir.name != "main":
+            if operator_dir.name != "main" and operator_dir.name != "package":
                 res.extend(self._parse_operator_bundle(operator_dir))
         return res
 
-    def _parse_operator_bundle(self, operator_dir):
+    def _parse_operator_bundle(self, operator_dir) -> List[Bundle]:
         """
         Parse the bundle associated with the operator_dir. We enforce the
         single-bundle-per-operator pattern.
@@ -84,20 +87,36 @@ class AddonBundles:
             )
             res.append(bundle)
 
-        if self.single_bundle:
-            if len(res) != 1:
-                raise AddonBundlesError(
-                    f"invalid structure for {self.root_dir}: expected"
-                    f" {operator_dir} to contain exactly 1 bundle, but found"
-                    f" {len(res)} bundles (single-bundle-per-operator pattern)."
-                )
-        else:
-            if len(res) == 0:
-                raise AddonBundlesError(
-                    f"invalid structure for {self.root_dir}:"
-                    f" {operator_dir} contains zero bundles."
-                )
+        if self.single_bundle and len(res) != 1:
+            raise AddonBundlesError(
+                f"invalid structure for {self.root_dir}: expected"
+                f" {operator_dir} to contain exactly 1 bundle, but found"
+                f" {len(res)} bundles (single-bundle-per-operator pattern)."
+            )
+        if len(res) == 0:
+            raise AddonBundlesError(
+                f"invalid structure for {self.root_dir}:"
+                f" {operator_dir} contains zero bundles."
+            )
 
+        return res
+
+    def _parse_package_bundle(self, operator_dir):
+        """
+        Parse the bundle associated with the operator_dir. We enforce the
+        single-bundle-per-operator pattern.
+        """
+        package_dir = self.root_dir / "package"
+        res = []
+        latest_version = max(get_subdirs(package_dir), key=semver.VersionInfo.parse)
+
+        bundle = Bundle(
+            addon_name=self.addon_name,
+            path=path.resolve(),
+            operator_name=self._get_bundle_operator_name(operator_dir),
+            version=path.name,
+            single_bundle=self.single_bundle,
+        )
         return res
 
     def _get_bundle_operator_name(self, operator_dir):
@@ -140,6 +159,7 @@ class AddonBundles:
         except jsonschema.exceptions.ValidationError as e:
             raise AddonBundlesError(f"schema validation error for {self}: {e}")
 
+    # TODO: Get latest version before parsing all the bundles
     @lru_cache(maxsize=128)
     def _get_latest_version(self):
         """
@@ -148,7 +168,7 @@ class AddonBundles:
         all_versions = [bundle.version for bundle in self.main_bundle]
         return max(all_versions, key=semver.VersionInfo.parse)
 
-    def get_all_bundles(self):
+    def get_all_olm_bundles(self):
         """
         Returns an addon's main_bundles and dependency_bundles.
         """
@@ -172,6 +192,7 @@ class AddonBundles:
                     env=env,
                     version=version,
                     index_image=index_image,
+                    addon_configuration_image=addon_configuration_image,
                     ocm_config=ocm_config,
                 )
                 res.append(imageset)

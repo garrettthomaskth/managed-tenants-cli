@@ -6,7 +6,7 @@ import urllib3
 from sretoolbox.utils.logger import get_text_logger
 
 from managedtenants.bundles.addon_bundles import AddonBundles
-from managedtenants.bundles.bundle_builder import BundleBuilder
+from managedtenants.bundles.olm_bundle_builder import OLMBundleBuilder
 from managedtenants.bundles.docker_api import DockerAPI
 from managedtenants.bundles.exceptions import MtbundlesCLIError
 from managedtenants.bundles.imageset_creator import ImageSetCreator
@@ -25,27 +25,41 @@ class MtbundlesCLI:
             level=logging.DEBUG if args.debug else logging.INFO,
         )
         self.docker_api = self._init_docker_api()
-        self.bundle_builder = self._init_bundle_builder()
+        self.olm_bundle_builder = self._init_bundle_builder()
         self.index_builder = self._init_index_builder()
         self.imageset_creator = self._init_imageset_creator()
 
     def run(self):
         target_addons = self._get_target_addons()
-        n = len(target_addons)
+        all_addons = target_addons.olm.union(target_addons.package)
+        n = len(all_addons)
 
-        for i, addon_dir in enumerate(target_addons):
+        for i, addon_dir in enumerate(all_addons):
             self.log.info(
                 f"==> Building bundles for {addon_dir.name} ({i+1}/{n})..."
             )
-            addon_bundles = AddonBundles(
-                addon_dir,
-                debug=self.args.debug,
-                single_bundle=self.args.single_bundle,
-            )
-            bundles = addon_bundles.get_all_bundles()
 
-            self.bundle_builder.build_and_push_all(bundles)
-            index_image = self.index_builder.build_and_push(bundles)
+            # TODO: check git if olm bundles have changed
+            if addon_dir in target_addons.olm:
+                addon_bundles = AddonBundles(
+                    addon_dir,
+                    debug=self.args.debug,
+                    single_bundle=self.args.single_bundle,
+                )
+
+                bundles = addon_bundles.get_all_olm_bundles()
+
+                self.olm_bundle_builder.build_and_push_all(bundles)
+                index_image = self.index_builder.build_and_push(bundles)
+
+            else:
+                # if no: get index image from most recent imageset in managed-tenants repo
+                # OR get most recent index image in quay. I am not sure which is better.
+
+
+            if addon_dir in target_addons.package:
+                # Then do the same for package bundles
+
             imageset_enabled_addons = self.args.imageset_enabled_addons
             if self.args.enable_gitlab:
                 self.imageset_creator.create(
@@ -70,14 +84,14 @@ class MtbundlesCLI:
                 self.log.error(err_msg)
                 raise MtbundlesCLIError(err_msg)
             self.log.info(f"Targeting single addon {addon.name}...")
-            return [addon]
+            return
 
         # TODO: (sblaisdo) deprecate the changed_addons workflow?
         if self.args.only_changed:
             self.log.info("Targeting changed addons as reported by git...")
             return ChangeDetector(
                 addons_dir=self.addons_dir, dry_run=self.args.dry_run
-            ).get_changed_addons()
+            ).get_changed_addons_by_type()
 
         self.log.info(f"Targeting all addons in {self.addons_dir}.")
         return list(self.addons_dir.iterdir())
@@ -92,7 +106,7 @@ class MtbundlesCLI:
         )
 
     def _init_bundle_builder(self):
-        return BundleBuilder(
+        return OLMBundleBuilder(
             docker_api=self.docker_api,
             dry_run=self.args.dry_run,
             debug=self.args.debug,

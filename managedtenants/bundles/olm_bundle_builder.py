@@ -8,7 +8,7 @@ from managedtenants.bundles.exceptions import BundleBuilderError, DockerError
 from managedtenants.utils.git import get_short_hash
 
 
-class BundleBuilder:
+class OLMBundleBuilder:
     """
     Build and push bundle images.
 

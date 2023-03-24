@@ -43,6 +43,7 @@ properties:
     items:
       type: string
       pattern: ^([A-Za-z -]+ <[0-9A-Za-z_.-]+@redhat\.com>,?)+$
+    description: "List of additional email addresses of employees who would like to receive notifications. Needs to match: 'some name <some-email@redhat.com>'."
   quayRepo:
     type: string
     pattern: ^quay\.io/osd-addons/[a-z-]+$
@@ -172,7 +173,10 @@ properties:
         minItems: 1
   metricsFederation:
     type: object
-    description: "Configuration parameters to be injected in the ServiceMonitor used for federation. The target prometheus server found by matchLabels needs to serve service-ca signed TLS traffic (https://docs.openshift.com/container-platform/4.6/security/certificate_types_descriptions/service-ca-certificates.html), and it needs to be runing inside the monitoring.namespace, with the service name 'prometheus'."
+    description: "Configuration parameters to be injected in the ServiceMonitor 
+      used for federation. The target prometheus server found by matchLabels 
+      needs to serve service-ca signed TLS traffic (https://docs.openshift.com/container-platform/4.6/security/certificate_types_descriptions/service-ca-certificates.html), 
+      and it needs to be running inside the monitoring.namespace, with the service name 'prometheus'."
     additionalProperties: false
     required:
       - portName
@@ -294,11 +298,17 @@ properties:
   startingCSV:
     type: string
     format: printable
+    description: "NOT SUPPORTED IN ADDON OPERATOR. 
+      Version of the addon to use on a fresh install. 
+      If this version is not the head of the upgrade path and 
+      `manualInstallPlanApproval` is not set to `true`, the 
+      addon will automatically be updated when installed."
   indexImage:
     type: string
     pattern: ^quay\.io/osd-addons/[a-z-]+
+    description: "DEPRECATED: Please move to imageSets and use `addonImageSetVersion`."
   addonImageSetVersion:
-    description: "A string which specifies the imageset to use. Can either be 'latest', a version string or 'null'."
+    description: "A string which specifies the imageset to use. Can either be 'latest' or 'null'."
   pagerduty:
     type: object
     additionalProperties: false
@@ -327,7 +337,8 @@ properties:
   deadmanssnitch:
     type: object
     additionalProperties: false
-    description: "Denotes the Deadmans Snitch Configuration which is supposed to be setup alongside the Addon."
+    description: "Denotes the Dead Man's Snitch Configuration which 
+        is supposed to be setup alongside the Addon."
     required:
       - tags
     properties:

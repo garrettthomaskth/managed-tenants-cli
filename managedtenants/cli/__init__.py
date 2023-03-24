@@ -211,7 +211,7 @@ class Cli:
                 path = self.args.tasks_reference
             self.tasks_path = Path(path)
 
-            # init task logger /w appropriate log_level
+            # init task logger with appropriate log_level
             log_level = logging.INFO if self.args.debug else logging.WARN
             _ = get_text_logger(name="task", level=log_level)
             self._run()

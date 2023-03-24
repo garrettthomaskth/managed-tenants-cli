@@ -147,7 +147,7 @@ class Bundle:
         if self._is_main_bundle():
             return f"{self.addon_name}-bundle"
 
-        # Prepend dependency bundles /w addon_name to avoid quay collisions.
+        # Prepend dependency bundles with addon_name to avoid quay collisions.
         return f"{self.addon_name}-{self.operator_name}-bundle"
 
     def index_repo_name(self):

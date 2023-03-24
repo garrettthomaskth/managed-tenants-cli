@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+from typing import Set
 
 from sretoolbox.utils.logger import get_text_logger
 
 from managedtenants.utils.general_utils import run
+from managedtenants.utils.types import AddonsByType
 
 
 class ChangeDetector:
@@ -12,32 +14,39 @@ class ChangeDetector:
         self.addons_dir = addons_dir
         self.log = get_text_logger("app")
 
-    def get_changed_addons(self):
+    def get_changed_addons_by_type(self) -> AddonsByType:
         """
         Get the list of all changed addons.
         """
         addons_dir = Path(self.addons_dir).resolve()
         all_addons = set(addons_dir.iterdir())
         changed_files = self._get_changed_files()
-        return self._intersect(parents=all_addons, children=changed_files)
+        return self.find_types_of_changed_bundles(addons=all_addons,
+                                                  changed_files=changed_files)
 
     @staticmethod
-    def _intersect(parents, children):
+    def find_types_of_changed_bundles(addons: Set[Path], changed_files: Set[Path]) -> AddonsByType:
         """
-        Abstraction to find all parents that have at least a child path listed
+        Abstraction to find all parents that have at least one child path listed
         in children.
 
-        :param parents: set of parent directories
-        :param children: set of child paths
+        :param addons: set of parent directories
+        :param changed_files: set of child paths
         """
-        res = set()
-        for child in children:
-            match = set(child.parents).intersection(parents)
+        package_res = set()
+        olm_res = set()
+        for file in changed_files:
+            addon_match = set(file.parents).intersection(addons)
+            if len(addon_match) == 0:
+                continue
 
-            # If match is already in res this is a no-op
-            res.update(match)
+            package_bundle_dir = list(addon_match)[0] / "package"
+            if package_bundle_dir in file.parents:
+                package_res.update(addon_match)
+            else:
+                olm_res.update(addon_match)
 
-        return res
+        return AddonsByType(olm_res, package_res)
 
     def _get_changed_files(self):
         """

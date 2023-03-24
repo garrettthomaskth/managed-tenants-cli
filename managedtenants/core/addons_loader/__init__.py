@@ -34,6 +34,6 @@ def get_candidates(path, args):
     """
     if args.only_changed:
         cd = ChangeDetector(addons_dir=path, dry_run=args.dry_run)
-        return sorted(cd.get_changed_addons())
+        return sorted(cd.get_changed_addons_by_type())
 
     return sorted(path.iterdir())

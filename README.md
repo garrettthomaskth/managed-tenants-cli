@@ -6,11 +6,11 @@ A CLI tool commonly used by MT-SRE projects at Red Hat.
 
 ### Available subcommands
 
-| Subcommand       | Description                                                                        |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| `load`           | Loads the addons inventory                                                         |
-| `run`            | Runs the task                                                                      |
-| `tasks_reference` | [path:search] "path" for the directory or file and "search" string to filter tasks |
+| Subcommand | Description                |
+|------------|----------------------------|
+| `load`     | Loads the addons inventory |
+| `run`      | Runs the specified tasks   |
+| `bundles`  | Builds and pushes bundles  |
 
 ### Available flags
 

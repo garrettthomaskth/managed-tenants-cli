@@ -4,7 +4,7 @@ from sretoolbox.binaries import Mtcli, OperatorSDK, Opm
 class LazyBin:
     """
     Abstraction around sretoolbox to avoid pulling binaries from the internet
-    before they actually need to be ran.
+    before they actually need to be run.
     """
 
     def __init__(self, bin_class, version, download_path):
